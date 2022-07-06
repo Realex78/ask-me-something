@@ -20,10 +20,16 @@ db.prepare("CREATE TABLE IF NOT EXISTS messages (content TEXT NOT NULL)").run()
 app.use(express.urlencoded({ extended: true }))
 
 app.post("/api/post", (req, res) => {
-	if (req.body.message == "") return res.status(400).redirect("../")
-	const info = db.prepare("INSERT INTO messages VALUES (?)").run(req.body.message)
-	if (info.changes == 1) res.status(201).redirect("../success")
-	else res.status(500).redirect("./error")
+	if (req.body.message == "" || req.body.message.length > 2000) return res.status(400).redirect("../")
+	console.log("New message!")
+	try {
+		const info = db.prepare("INSERT INTO messages VALUES (?)").run(req.body.message)
+		if (info.changes == 1) res.status(201).redirect("../success")
+		else res.status(500).redirect("./error")
+	} catch (error) {
+		console.error(error)
+		res.status(500).redirect("./error")
+	}
 })
 
 app.get("/view", (req, res) => {
@@ -33,9 +39,10 @@ app.get("/view", (req, res) => {
 })
 
 app.post("/api/get", (req, res) => {
-	if (req.body.password != currentOTP) return res.status(401).send("Invalid password")
+	if (req.body.password != currentOTP || req.body.password == "") return res.status(401).send("Invalid password")
 	const info = db.prepare("SELECT * FROM messages").all()
 	res.status(200).send(info)
+	currentOTP = null;
 })
 
 app.use(express.static("static", { extensions: ["html"] }))
